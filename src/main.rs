@@ -206,6 +206,14 @@ fn run() -> io::Result<()> {
                 .takes_value(true)
                 .value_name("N")
                 .help("read only N bytes from the input"),
+        )
+        .arg(
+            Arg::with_name("padding")
+                .short("p")
+                .long("padding")
+                .takes_value(true)
+                .value_name("N")
+                .help("discard first N bytes from the input before starting to read"),
         );
 
     let matches = app.get_matches();
@@ -216,6 +224,22 @@ fn run() -> io::Result<()> {
         Some(filename) => Box::new(File::open(filename)?),
         None => Box::new(stdin.lock()),
     };
+
+    if let Some(padding_length) = matches
+        .value_of("padding")
+        .and_then(|n| n.parse::<u64>().ok())
+    {
+        let mut buffer = [0; 1];
+        let mut read_bytes: usize = 0;
+        loop {
+            let size = reader.read(&mut buffer)?;
+            if size == 0 || read_bytes == padding_length as usize {
+                break;
+            }
+
+            read_bytes += size;
+        }
+    }
 
     if let Some(length) = matches
         .value_of("length")
